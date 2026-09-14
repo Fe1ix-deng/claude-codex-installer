@@ -130,9 +130,14 @@ jobs:
           mkdir -p "$mount_point"
           hdiutil attach -readonly -nobrowse -mountpoint "$mount_point" dist/ai-installer-macos-arm64.dmg
           trap 'hdiutil detach "$mount_point" -force >/dev/null 2>&1 || true' EXIT
-          test -x "$mount_point/AI Installer.command"
-          test -x "$mount_point/.ai-installer-macos-arm64"
-          target="$("$mount_point/AI Installer.command" --print-target)"
+          app_path="$mount_point/AI Installer.app"
+          test -d "$app_path"
+          test -x "$app_path/Contents/MacOS/AI Installer"
+          test -x "$app_path/Contents/MacOS/ai-installer-macos-arm64"
+          /usr/bin/plutil -lint "$app_path/Contents/Info.plist"
+          test "$(/usr/bin/plutil -extract CFBundleExecutable raw -o - "$app_path/Contents/Info.plist")" = "AI Installer"
+          test "$(/usr/bin/plutil -extract CFBundlePackageType raw -o - "$app_path/Contents/Info.plist")" = "APPL"
+          target="$("$app_path/Contents/MacOS/AI Installer" --print-target)"
           printf '%s\n' "$target" | tee dist/print-target.txt
           node -e 'const target = JSON.parse(process.argv[1]); if (target.platform !== "darwin" || target.arch !== "arm64" || target.isWindows !== false) process.exit(1);' "$target"
       - name: Verify DMG and record build evidence
@@ -175,7 +180,7 @@ jobs:
           mkdir -p "$mount_point"
           hdiutil attach -readonly -nobrowse -mountpoint "$mount_point" dist/ai-installer-macos-arm64.dmg >/dev/null
           trap 'hdiutil detach "$mount_point" -force >/dev/null 2>&1 || true' EXIT
-          "$mount_point/AI Installer.command" --ci 2>&1 | tee dist/macos-install-validation.log
+          "$mount_point/AI Installer.app/Contents/MacOS/AI Installer" --ci 2>&1 | tee dist/macos-install-validation.log
           installer_status=${PIPESTATUS[0]}
           set -e
           printf '%s\n' "$installer_status" | tee dist/installer-exit-code.txt
