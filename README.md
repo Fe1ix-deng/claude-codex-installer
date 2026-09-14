@@ -1,6 +1,6 @@
 # 一键安装 CC Switch + Claude Desktop + Codex — v1.0.0
 
-> 面向 API 中转站用户的一键配置工具，支持 **Windows 10 / 11（x64 / ARM64）** 与 **macOS Apple Silicon（M1 / M2 / M3 / M4）**。双击运行，自动完成 CC Switch、Claude Desktop 和 Codex 的下载、安装与 API 密钥配置，无需任何手动操作。
+> 面向 API 中转站用户的一键安装工具，支持 **Windows 10 / 11（x64 / ARM64）** 与 **macOS Apple Silicon（M1 / M2 / M3 / M4）**。用户先从 GitHub Release 页面手动下载对应平台的安装包；启动后，安装器会自动下载并安装 CC Switch、Claude Desktop 和 Codex。API 密钥与 Provider 配置仍需用户手动完成。
 
 ---
 
@@ -22,14 +22,22 @@
 
 ## 项目简介
 
-本工具是一个独立可执行的安装向导，帮助 API 中转站的用户在 **Windows 10 / Windows 11** 或 **macOS Apple Silicon** 上从零开始，一键完成以下操作：
+本工具是一个独立可执行的安装向导，帮助 API 中转站的用户在 **Windows 10 / Windows 11** 或 **macOS Apple Silicon** 上完成首次安装。当前使用方式是：用户先从 GitHub Release 页面手动下载与系统匹配的主安装器，再启动安装器。
+
+安装器启动后会自动完成以下操作：
 
 1. 自动检测当前系统架构（Windows x64 / ARM64、macOS Apple Silicon M1–M4）
 2. 下载并安装 [CC Switch](https://github.com/farion1231/cc-switch)（API 中转站密钥管理工具）
-3. 下载并安装 Claude Desktop 和 / 或 Codex（AI 编程助手）
-4. 将用户提供的 Claude API 密钥 / Codex API 密钥自动写入 CC Switch，完成中转站 Provider 配置
+3. 下载并安装 Claude Desktop 和 Codex（AI 编程助手）
 
-安装完成后，三款 AI 工具均可独立运行，后续更新由各自的内置机制负责，本工具只负责首次安装与配置。
+安装完成后，用户还需要访问自己的中转站网站，手动导入或填写 API 密钥，并在 Claude Desktop 和 Codex 中将 API Provider 设置为 CC Switch。本工具当前不提供网页下载页、在线系统检测、软件选择界面或 API 密钥自动写入功能，也不负责后续版本更新。
+
+使用流程：
+
+1. 从 [Releases 页面](https://github.com/Fe1ix-deng/claude-codex-installer/releases/latest) 手动下载对应平台的主安装器
+2. 启动安装器，程序识别当前系统和架构
+3. 安装器自动下载并安装 CC Switch、Claude Desktop 和 Codex
+4. 安装完成后，手动配置 API 密钥和 Provider
 
 ---
 
@@ -61,10 +69,8 @@
 
 1. 从 [Releases 页面](https://github.com/Fe1ix-deng/claude-codex-installer/releases/latest) 下载对应架构的 `.exe` 文件。
 2. 双击运行。若出现"Windows 已保护你的电脑"提示，点击**更多信息** → **仍要运行**。
-3. 按照向导提示操作：
-   - 勾选要安装的工具（Codex、Claude Desktop 或两者）
-   - 分别输入对应分组的 API 密钥和中转站地址
-4. 等待安装完成，点击**启动**即可开始使用。
+3. 等待安装器自动下载并安装 CC Switch、Claude Desktop 和 Codex。当前版本不提供工具勾选界面，也不会在安装器中收集或写入 API 密钥。
+4. 安装完成后，访问你的中转站网站，按其说明导入或填写 API 密钥；然后在 Claude Desktop 和 Codex 的设置中将 API Provider 设为 CC Switch。
 
 > **提示**：安装 CC Switch 到 `C:\Program Files` 需要管理员权限，程序会在需要时自动请求 UAC 提权。
 
@@ -106,9 +112,9 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 3. 点击**仍要打开**（Open Anyway）。
 4. 在系统确认框中输入 Mac 开机密码，或使用指纹（Touch ID）确认。
 
-### 4. 按照向导提示完成安装
+### 4. 自动安装并完成手动配置
 
-授权后，按屏幕提示选择要安装的工具并输入 API 密钥即可。
+授权后，安装器会自动下载并安装 CC Switch、Claude Desktop 和 Codex。当前版本不提供工具选择界面，也不会在安装器中输入或自动写入 API 密钥。安装完成后，请访问你的中转站网站，手动完成 API 密钥和 Provider 配置。
 
 ---
 
@@ -139,7 +145,7 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 **当前版本的可执行文件均未经过代码签名（Windows Authenticode）或 Apple 公证（macOS Notarization）。**
 
 - **Windows**：SmartScreen 可能弹出"Windows 已保护你的电脑"警告，点击"更多信息"→"仍要运行"即可通过。
-- **macOS**：Gatekeeper 可能阻止未经公证的 DMG 或命令文件，请按[上方步骤](#3-首次运行手动放行-gatekeeper)通过右键"打开"或系统设置"Open Anyway"对本文件单独授权。
+- **macOS**：Gatekeeper 可能阻止未经公证的 DMG 或命令文件，请按[上方步骤](#3-首次运行按系统提示手动放行-gatekeeper)通过右键"打开"或系统设置"Open Anyway"对本文件单独授权。
 
 ### 不建议的操作
 
@@ -173,7 +179,9 @@ csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 
 ## 上游来源与致谢
 
-本工具**不构建、不修改、不托管任何上游二进制文件**，安装器运行时从以下项目的发布渠道获取文件：
+本工具本身不构建、不修改、不托管 Claude/Codex 的官方二进制文件，安装包分别来自上述三个项目各自发布的 GitHub Release。
+
+安装器运行时从以下项目的发布渠道获取文件：
 
 特别感谢两个开源上游项目的维护者：
 
@@ -203,3 +211,5 @@ csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 - **macOS 首次启动需人工放行**：未签名、未公证的安装器可能被 Gatekeeper 阻止，请按上方步骤操作。
 - **macOS Intel 暂不支持**：当前仅提供 Apple Silicon（arm64）构建，Intel Mac 用户请等待后续版本。
 - **长期保持未签名**：Windows 安装包不含 Authenticode 签名，macOS 安装包不含代码签名和公证；请使用 `SHA256SUMS.txt` 校验下载文件。
+- **需要手动配置 API**：安装器不会获取、保存或自动写入 API 密钥，也不会自动配置 Provider。
+- **需要手动下载主安装器**：当前没有独立网页或在线检测服务，系统和架构检测只发生在用户启动已下载的安装器之后。

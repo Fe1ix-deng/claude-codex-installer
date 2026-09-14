@@ -8,7 +8,7 @@
 
 ## 下载、校验与首次运行
 
-1. 从项目 GitHub Release 下载 `ai-installer-macos-arm64.dmg` 和 `SHA256SUMS.txt`。
+1. 用户先从项目 [GitHub Release 页面](https://github.com/Fe1ix-deng/claude-codex-installer/releases/latest) 手动下载 `ai-installer-macos-arm64.dmg` 和 `SHA256SUMS.txt`。当前没有网页自动检测或自动选择下载功能。
 2. 在终端校验文件：
 
    ```bash
@@ -23,7 +23,8 @@
    - 找到已阻止打开 `AI Installer.app` 的提示；
    - 点击**仍要打开**（Open Anyway）；
    - 输入 Mac 开机密码，或使用 Touch ID 确认。
-5. 放行后重新双击 `AI Installer.app`，安装程序会打开 Terminal 并开始安装。
+5. 放行后重新双击 `AI Installer.app`，安装程序会打开 Terminal，并自动下载和安装 CC Switch、Claude Desktop 和 Codex。
+6. 安装完成后，访问你的中转站网站，手动完成 API 密钥和 Provider 配置。安装器不会收集、保存或自动写入 API 密钥，也没有工具勾选界面。
 
 ## 安全说明
 

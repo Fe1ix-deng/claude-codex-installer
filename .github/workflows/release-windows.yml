@@ -1,9 +1,7 @@
-name: Release Windows installers
+name: Legacy Windows release workflow (manual only)
 
 on:
-  push:
-    tags:
-      - 'v*.*.*-windows.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -122,7 +120,7 @@ jobs:
           set -euo pipefail
           gh api "repos/${GITHUB_REPOSITORY}/contents/THIRD-PARTY-NOTICES.md?ref=${GITHUB_REF_NAME}" \
             --jq '.path' | grep -Fx 'THIRD-PARTY-NOTICES.md'
-      - name: Create unsigned GitHub Release
+      - name: Create legacy unsigned GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -133,8 +131,9 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           body: |
-            当前版本为未签名 Windows 安装包。
+            这是旧版 Windows-only 发布流程，仅保留为手动维护入口。正式版本请使用 combined `v1.0.0` 及之后的 GitHub Release。
+
+            当前版本为未签名 Windows 安装包；项目不计划申请或维护 Windows Authenticode 签名。
 
             - 支持 Windows x64 和原生 ARM64；不提供 x86。
             - 请使用 `SHA256SUMS.txt` 校验下载文件。
-            - SignPath Foundation OV 签名申请审核完成后，签名版本将通过后续 Release 发布。

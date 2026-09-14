@@ -156,7 +156,7 @@ function requestRelease(apiUrl, httpsGet) {
         {
           headers: {
             Accept: 'application/vnd.github+json',
-            'User-Agent': 'cc-switch-installer/0.1',
+            'User-Agent': 'cc-switch-installer/1.0.0',
           },
         },
         (response) => {
@@ -207,7 +207,7 @@ function fetchText(url, httpsGet = https.get) {
           {
             headers: {
               Accept: 'text/plain',
-              'User-Agent': 'cc-switch-installer/0.1',
+              'User-Agent': 'cc-switch-installer/1.0.0',
             },
           },
           (response) => {
@@ -357,7 +357,7 @@ async function downloadFile(url, destPath, httpsGet = https.get) {
         {
           method: 'HEAD',
           headers: {
-            'User-Agent': 'cc-switch-installer/0.1',
+            'User-Agent': 'cc-switch-installer/1.0.0',
           },
         },
         (response) => {
@@ -433,7 +433,7 @@ async function downloadFile(url, destPath, httpsGet = https.get) {
           currentUrl,
           {
             headers: {
-              'User-Agent': 'cc-switch-installer/0.1',
+            'User-Agent': 'cc-switch-installer/1.0.0',
               ...(offset > 0 && { Range: `bytes=${offset}-` }),
             },
           },
