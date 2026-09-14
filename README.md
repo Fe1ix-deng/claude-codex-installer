@@ -1,4 +1,4 @@
-# 一键安装 CC Switch + Claude Desktop + Codex — Windows / macOS 安装向导
+# 一键安装 CC Switch + Claude Desktop + Codex — v1.0.0
 
 > 面向 API 中转站用户的一键配置工具，支持 **Windows 10 / 11（x64 / ARM64）** 与 **macOS Apple Silicon（M1 / M2 / M3 / M4）**。双击运行，自动完成 CC Switch、Claude Desktop 和 Codex 的下载、安装与 API 密钥配置，无需任何手动操作。
 
@@ -12,9 +12,9 @@
 - [Windows 使用方法](#windows-使用方法)
 - [macOS 使用方法](#macos-使用方法)
 - [SHA-256 校验](#sha-256-校验)
-- [签名与公证说明](#签名与公证说明)
+- [安全与首次运行说明](#安全与首次运行说明)
 - [运行中被阻止的解决方法](#运行中被阻止的解决方法)
-- [上游来源](#上游来源)
+- [上游来源与致谢](#上游来源与致谢)
 - [当前 Release](#当前-release)
 - [已知限制](#已知限制)
 
@@ -41,7 +41,7 @@
 |------|------|
 | `ai-installer-win-x64.exe` | Windows x64（64 位） |
 | `ai-installer-win-arm64.exe` | Windows ARM64 |
-| `ai-installer-macos-arm64.dmg` | macOS Apple Silicon（实验性） |
+| `ai-installer-macos-arm64.dmg` | macOS Apple Silicon（已验证） |
 
 ---
 
@@ -51,7 +51,7 @@
 |------|------|------|
 | Windows | x64 | ✅ 支持 |
 | Windows | ARM64 | ✅ 支持 |
-| macOS | Apple Silicon (arm64) | 🧪 实验性 |
+| macOS | Apple Silicon (arm64) | ✅ 已验证支持 |
 | Windows | x86（32 位） | ❌ 不支持 |
 | macOS | Intel (x86_64) | ⚠️ 暂不支持 / 未测试 |
 
@@ -72,7 +72,7 @@
 
 ## macOS 安装教程
 
-> **⚠️ 实验性支持**：macOS 版本仅在 Apple Silicon（M1 / M2 / M3 / M4）上测试，Intel Mac 暂不支持。
+> **支持范围**：macOS 版本已在 Apple Silicon（M1 / M2 / M3 / M4）实机验证，Intel Mac 暂不支持。
 
 ### 1. 下载并校验安装包
 
@@ -87,7 +87,7 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 
 双击 `ai-installer-macos-arm64.dmg`，在打开的磁盘映像中双击 `AI Installer.app`。它会自动打开 Terminal，启动安装器，并保留安装日志。
 
-### 3. 首次运行：手动放行 Gatekeeper
+### 3. 首次运行：按系统提示手动放行 Gatekeeper
 
 由于安装器未经签名和公证，macOS 可能会阻止 DMG 或命令文件运行。请使用以下任一方式授权：
 
@@ -99,11 +99,12 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 
 #### 方法二：系统设置 Open Anyway
 
-如果弹窗中只有"移到废纸篓"选项，或出现「**macOS 无法验证此 App 不包含恶意软件**」提示，请：
+如果双击 `AI Installer.app` 后无法打开，或弹窗中只有"移到废纸篓"选项，请：
 
 1. 打开**系统设置** → **隐私与安全性** → **通用**。
-2. 向下滚动，找到已阻止使用安装器的提示。
-3. 点击**仍要打开**（Open Anyway），在弹窗中再次确认。
+2. 向下滚动，找到已阻止打开 `AI Installer.app` 的提示。
+3. 点击**仍要打开**（Open Anyway）。
+4. 在系统确认框中输入 Mac 开机密码，或使用指纹（Touch ID）确认。
 
 ### 4. 按照向导提示完成安装
 
@@ -133,7 +134,7 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 
 ---
 
-## 签名与公证说明
+## 安全与首次运行说明
 
 **当前版本的可执行文件均未经过代码签名（Windows Authenticode）或 Apple 公证（macOS Notarization）。**
 
@@ -150,9 +151,7 @@ sudo spctl --master-disable          # 关闭 Gatekeeper
 csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 ```
 
-关闭 Gatekeeper 或 SIP 会使整个系统对所有未签名软件敞开大门，远超运行本工具所需的权限范围。推荐仅通过右键"打开"或"Open Anyway"方式对本文件单独授权。
-
-签名与公证计划在后续版本中完善。
+关闭 Gatekeeper 或 SIP 会使整个系统对所有未签名软件敞开大门，远超运行本工具所需的权限范围。项目不会在后续版本中申请或维护 Windows/macOS 签名；推荐仅对已校验的项目 DMG 通过右键"打开"或"Open Anyway"单独授权。
 
 ---
 
@@ -164,7 +163,7 @@ csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 - `无法打开"AI Installer.app"，因为它来自身份不明的开发者。`
 - 应用被系统 blocked，无法继续
 
-**步骤一**：确认 DMG 已完成 SHA-256 校验，然后打开**系统设置** → **隐私与安全性** → **通用**，确认是否出现"Open Anyway"选项，若有则点击放行。
+**步骤一**：确认 DMG 已完成 SHA-256 校验，然后打开**系统设置** → **隐私与安全性** → **通用**，确认是否出现"仍要打开"（Open Anyway）选项，点击后输入开机密码或使用 Touch ID 放行。
 
 **步骤二**：若上述选项未出现，不要直接运行裸 Mach-O 文件，也不要关闭 Gatekeeper 或 SIP。请确认使用的是已校验的项目 DMG，并联系项目维护者报告阻止信息。
 
@@ -172,9 +171,16 @@ csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 
 ---
 
-## 上游来源
+## 上游来源与致谢
 
-本工具**不托管、不修改任何上游二进制文件**，安装包直接来自各项目官方发布渠道：
+本工具**不构建、不修改、不托管任何上游二进制文件**，安装器运行时从以下项目的发布渠道获取文件：
+
+特别感谢两个开源上游项目的维护者：
+
+- [Claude App Mirror](https://github.com/Wangnov/claude-app-mirror)
+- [Codex App Mirror](https://github.com/Wangnov/codex-app-mirror)
+
+同时感谢 [CC Switch](https://github.com/farion1231/cc-switch) 项目提供 API 中转站配置能力。
 
 | 软件 | 来源 | 许可证 |
 |------|------|--------|
@@ -188,12 +194,12 @@ csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 
 ## 当前 Release
 
-→ **[查看最新 Release](https://github.com/Fe1ix-deng/claude-codex-installer/releases/latest)**
+→ **[查看 v1.0.0 Release](https://github.com/Fe1ix-deng/claude-codex-installer/releases/tag/v1.0.0)**
 
 ---
 
 ## 已知限制
 
-- **macOS GUI 自动启动未测试**：macOS 版本安装后的 GUI 独立启动证据尚未完成，不保证可用。
+- **macOS 首次启动需人工放行**：未签名、未公证的安装器可能被 Gatekeeper 阻止，请按上方步骤操作。
 - **macOS Intel 暂不支持**：当前仅提供 Apple Silicon（arm64）构建，Intel Mac 用户请等待后续版本。
-- **签名与公证后置**：当前版本未进行代码签名和 macOS 公证，计划在后续稳定版本中完善。首次运行需手动授权（详见[签名与公证说明](#签名与公证说明)）。
+- **长期保持未签名**：Windows 安装包不含 Authenticode 签名，macOS 安装包不含代码签名和公证；请使用 `SHA256SUMS.txt` 校验下载文件。

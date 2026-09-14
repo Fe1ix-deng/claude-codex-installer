@@ -4,6 +4,10 @@
 
 本工具本身不构建、不修改、不托管 Claude/Codex 的官方二进制文件，安装包分别来自上述三个项目各自发布的 GitHub Release。
 
+特别感谢 [Claude App Mirror](https://github.com/Wangnov/claude-app-mirror) 和
+[Codex App Mirror](https://github.com/Wangnov/codex-app-mirror) 两个开源项目的维护者，
+以及 [CC Switch](https://github.com/farion1231/cc-switch) 项目提供的开源工具。
+
 ## CC Switch
 
 - Project: CC Switch

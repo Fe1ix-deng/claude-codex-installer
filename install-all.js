@@ -749,7 +749,7 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
   }
 
   if (isMacOs) {
-    console.log('[状态] macOS Apple Silicon 实验性实现中；真实独立启动证据仍保持 blocked');
+    console.log('[状态] macOS Apple Silicon 已验证支持；首次启动可能需要手动放行 Gatekeeper');
   } else if (artifact.installerType === 'msix') {
     console.log('[检测] MSIX 安装状态将在 Add-AppxPackage 完成后由退出码确认');
   } else {
@@ -849,7 +849,7 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
         console.log();
         if (DRY_RUN) {
           console.log('[模拟] 已完成下载和 SHA-256 校验，跳过 DMG 挂载、复制、卸载和启动');
-          operationResult = { status: 'dry-run', supportLevel: 'experimental', dryRun: true };
+          operationResult = { status: 'dry-run', supportLevel: 'supported', dryRun: true };
         } else {
           try {
             const install = options.installDmg || defaultInstallDmg;
@@ -865,10 +865,10 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
             });
             console.log(`[安装] ${config.name} 已复制到用户应用目录: ${installed.appPath}`);
             console.log('[验证] Bundle ID、主可执行文件和 arm64 架构校验通过');
-            console.log('[状态] experimental / implementation-in-progress；独立启动结论仍保持 blocked');
+            console.log('[状态] macOS Apple Silicon 已验证支持；首次启动可能需要手动放行 Gatekeeper');
             operationResult = {
               status: 'installed',
-              supportLevel: 'experimental',
+              supportLevel: 'supported',
               appPath: installed.appPath,
             };
           } catch (error) {
@@ -1012,11 +1012,11 @@ async function main({
   wait = waitForExit,
 } = {}) {
   if (DRY_RUN) {
-    console.log('=== AI 工具一键安装器 v0.1（模拟运行模式）===');
+    console.log('=== AI 工具一键安装器 v1.0.0（模拟运行模式）===');
     console.log('[提示] 检测和下载是真实的，但不会真正执行安装');
     console.log('[提示] 要真正安装，请去掉 --dry-run 参数');
   } else {
-    console.log('=== AI 工具一键安装器 v0.1 ===');
+    console.log('=== AI 工具一键安装器 v1.0.0 ===');
   }
   console.log('即将安装: CC Switch、Claude Desktop、Codex');
   console.log();

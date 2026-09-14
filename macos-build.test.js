@@ -30,7 +30,7 @@ test('macOS build wraps the executable in a Finder-friendly app bundle DMG', () 
   assert.match(buildScript, /hdiutil/);
 });
 
-test('macOS workflow pushes only the experimental branch and validates a real install', () => {
+test('macOS workflow validates the formal Apple Silicon release path', () => {
   const workflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'package-macos-arm64.yml'), 'utf8');
   assert.match(workflow, /push:\s*\n\s+branches:\s*\n\s+- feature\/macos-arm64-experimental/);
   assert.match(workflow, /workflow_dispatch:/);
@@ -62,7 +62,7 @@ test('macOS workflow pushes only the experimental branch and validates a real in
   assert.match(workflow, /codesign --verify --deep --strict --verbose=4/);
   assert.match(workflow, /spctl --assess --type execute --verbose=4/);
   assert.match(workflow, /launch=not-tested/);
-  assert.match(workflow, /ai-installer-macos-arm64-experimental/);
+  assert.match(workflow, /ai-installer-macos-arm64\.dmg/);
   assert.match(workflow, /macos-checksum-validation\.txt/);
   assert.doesNotMatch(workflow, /macos-(?:13|14)-x64|x64|Intel|Rosetta/i);
   assert.match(workflow, /signed|unsigned/i);

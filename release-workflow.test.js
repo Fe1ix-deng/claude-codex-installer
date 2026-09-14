@@ -50,3 +50,10 @@ test('combined release does not publish CI evidence or logs', () => {
   const releaseFiles = getReleaseFiles().join('\n');
   assert.doesNotMatch(releaseFiles, /evidence|validation|exit-code|BUILD-STATUS|\.log/i);
 });
+
+test('combined release is the only standard version-tag release path', () => {
+  assert.match(workflow, /tags:\s*\n\s+- 'v\*\.\*\.\*'/);
+  assert.doesNotMatch(workflow, /macos-arm64-experimental/);
+  assert.doesNotMatch(workflow, /prerelease:\s*true/);
+  assert.match(workflow, /prerelease:\s*false/);
+});

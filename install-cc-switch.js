@@ -626,11 +626,11 @@ async function installSoftware(config) {
 
 async function main() {
   if (DRY_RUN) {
-    console.log('=== AI 工具一键安装器 v0.1（模拟运行模式）===');
+    console.log('=== AI 工具一键安装器 v1.0.0（模拟运行模式）===');
     console.log('[提示] 检测和下载是真实的，但不会真正执行安装');
     console.log('[提示] 要真正安装，请去掉 --dry-run 参数');
   } else {
-    console.log('=== AI 工具一键安装器 v0.1 ===');
+    console.log('=== AI 工具一键安装器 v1.0.0 ===');
   }
   console.log('即将安装: CC Switch、Claude Desktop、Codex');
   console.log();

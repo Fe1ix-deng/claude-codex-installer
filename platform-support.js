@@ -88,7 +88,7 @@ function getUnsupportedTargetReason(target) {
   if (target.platform === 'darwin') {
     if (target.arch === 'arm64') return null;
     if (target.arch === 'x64') return 'macOS Intel/x64 本阶段不实现，保持 not-tested';
-    return 'macOS 仅支持 Apple Silicon arm64 实验版';
+    return 'macOS 仅支持 Apple Silicon arm64 正式版';
   }
   if (target.isWindows !== true) return '当前系统不是 Windows';
   if (target.arch === 'unknown') return 'Windows 原生架构未知，无法安全选择安装包';
@@ -99,7 +99,7 @@ function getUnsupportedTargetReason(target) {
 }
 
 function getTargetStatus(target) {
-  if (target && target.platform === 'darwin' && target.arch === 'arm64') return 'experimental';
+  if (target && target.platform === 'darwin' && target.arch === 'arm64') return 'supported';
   if (target && target.platform === 'darwin' && target.arch === 'x64') return 'not-tested';
   if (target && target.isWindows === true && (target.arch === 'x64' || target.arch === 'arm64')) return 'supported';
   return 'unsupported';

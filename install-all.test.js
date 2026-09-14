@@ -282,10 +282,10 @@ test('main CI mode exits non-zero and explains blocked applications', async () =
   }
 });
 
-test('experimental is support metadata, not an installation success status', () => {
+test('non-success support metadata is not an installation success status', () => {
   const summary = summarizeInstallResults(SOFTWARE_CONFIG.map((config) => ({
     config,
-    result: { status: config.id === 'claude' ? 'experimental' : 'installed' },
+    result: { status: config.id === 'claude' ? 'failed' : 'installed' },
   })));
 
   assert.equal(summary.overall, 'failed');
@@ -709,7 +709,7 @@ test('installSoftware installs audited macOS arm64 artifacts only after fixed ch
 
   assert.deepEqual(result, {
     status: 'installed',
-    supportLevel: 'experimental',
+    supportLevel: 'supported',
     appPath: path.join(downloadDir, 'Applications', 'Claude.app'),
   });
   assert.deepEqual(calls.map(([name]) => name), ['download', 'checksum', 'install']);

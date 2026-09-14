@@ -16,10 +16,9 @@ This file records decisions that apply to all future work in this repository.
 
 ## macOS Status
 
-- macOS Apple Silicon（`darwin/arm64`）是本阶段唯一新增目标，当前状态为 `experimental / implementation-in-progress`。
+- macOS Apple Silicon（`darwin/arm64`）是当前唯一提供的 macOS 目标，状态为已验证支持。
 - macOS Intel（`darwin/x64`）本阶段不实现安装路径，保持 `not-tested`；不生成 Intel 产物，也不使用 Rosetta 结果替代 Intel 原生验证。
-- 2026-09-10 的项目决策仅覆盖“在三款应用独立启动验收仍为 `blocked` 时允许开发实验版代码”的阶段门槛；旧的真实验证事实保持有效，`blocked` 不得美化为 `supported`。
-- 在 GitHub Actions 和后续真实 macOS 环境验收完成前，不得宣称 macOS 正式支持，不得创建 macOS Release 或 tag。
+- 2026-09-14 起，依据 Apple Silicon 实机完成 DMG、App 启动、系统安全放行和安装流程验证，允许创建正式 macOS Release 和 tag。
 - macOS 安装器允许未签名、未公证；文档必须指导用户先校验 SHA-256，再通过 Finder 右键 `Open` 或 System Settings → Privacy & Security → Open Anyway 手动放行。
 - 不自动关闭 Gatekeeper、SIP 或其他系统安全策略；不自动执行 `xattr` 删除 quarantine 属性。
 - macOS 上游应用仍然来自已审计的三个上游项目 Release；不猜测下载链接，不使用 Windows 下载链接。
@@ -29,25 +28,22 @@ This file records decisions that apply to all future work in this repository.
 
 ## Signing
 
-- The certificate strategy is OV code signing, not EV.
-- Apply to the SignPath Foundation free open-source signing program; do not purchase a certificate or manage a private key locally.
-- SignPath Foundation is expected to retain the private key in its HSM and perform signing from GitHub Actions.
-- The SignPath application and approval are an independent task and must not block development or unsigned releases.
-- Until approval is granted, artifacts are explicitly unsigned and integrity is communicated with `SHA256SUMS.txt`.
-- Do not add certificates, private keys, passwords, signing secrets, or invented SignPath identifiers to this repository.
+- Windows installers remain unsigned and macOS installers remain unsigned and unnotarized.
+- The project does not plan to apply for or manage Windows Authenticode certificates or Apple Developer signing/notarization.
+- Release integrity is communicated with `SHA256SUMS.txt`; never add certificates, private keys, passwords, or signing secrets to this repository.
 
 ## Release
 
 - The public distribution channel is a formal GitHub Release triggered by a version tag.
 - GitHub Actions artifacts are temporary build evidence, not the public distribution channel.
-- The unsigned release path may proceed while SignPath review is pending; after approval, signed executables can be added through a separate, auditable signing step.
+- Formal unsigned releases may proceed through the tag-driven GitHub Actions workflow.
 - A release must include architecture-specific executables and a checksum file generated from those exact files.
 
 ## Third-Party Dependencies and Provenance
 
 - The upstream projects listed in `THIRD-PARTY-NOTICES.md` are MIT-licensed dependencies. Preserve each upstream LICENSE text and original copyright line verbatim.
 - The project must retain source links and retrieval dates for each copied license text so future upstream license changes can be audited.
-- Use this exact provenance statement in product descriptions and the SignPath application materials:
+- Use this exact provenance statement in product descriptions and release materials:
 
   > 本工具本身不构建、不修改、不托管 Claude/Codex 的官方二进制文件，安装包分别来自上述三个项目各自发布的 GitHub Release。
 

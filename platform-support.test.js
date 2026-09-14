@@ -138,11 +138,11 @@ test('getUnsupportedTargetReason explains unsupported targets', () => {
   assert.equal(getUnsupportedTargetReason({ platform: 'win32', arch: 'unknown', isWindows: true }), 'Windows 原生架构未知，无法安全选择安装包');
   assert.equal(getUnsupportedTargetReason({ platform: 'darwin', arch: 'arm64', isWindows: false }), null);
   assert.equal(getUnsupportedTargetReason({ platform: 'darwin', arch: 'x64', isWindows: false }), 'macOS Intel/x64 本阶段不实现，保持 not-tested');
-  assert.equal(getUnsupportedTargetReason({ platform: 'darwin', arch: 'unknown', isWindows: false }), 'macOS 仅支持 Apple Silicon arm64 实验版');
+  assert.equal(getUnsupportedTargetReason({ platform: 'darwin', arch: 'unknown', isWindows: false }), 'macOS 仅支持 Apple Silicon arm64 正式版');
 });
 
-test('getTargetStatus distinguishes experimental Apple Silicon from untested Intel', () => {
-  assert.equal(getTargetStatus({ platform: 'darwin', arch: 'arm64', isWindows: false }), 'experimental');
+test('getTargetStatus distinguishes supported Apple Silicon from untested Intel', () => {
+  assert.equal(getTargetStatus({ platform: 'darwin', arch: 'arm64', isWindows: false }), 'supported');
   assert.equal(getTargetStatus({ platform: 'darwin', arch: 'x64', isWindows: false }), 'not-tested');
   assert.equal(getTargetStatus({ platform: 'win32', arch: 'x64', isWindows: true }), 'supported');
   assert.equal(getTargetStatus({ platform: 'linux', arch: 'x64', isWindows: false }), 'unsupported');

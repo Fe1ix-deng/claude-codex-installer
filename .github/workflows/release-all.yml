@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-      - 'v*.*.*-macos-arm64-experimental.*'
 
 permissions:
   contents: write
@@ -12,7 +11,6 @@ permissions:
 jobs:
   build-windows:
     name: Build Windows ${{ matrix.arch }}
-    if: contains(github.ref_name, '-macos-arm64-experimental.')
     strategy:
       fail-fast: false
       matrix:
@@ -81,8 +79,7 @@ jobs:
           retention-days: 14
 
   build-macos:
-    name: Build macOS Apple Silicon experimental installer
-    if: contains(github.ref_name, '-macos-arm64-experimental.')
+    name: Build macOS Apple Silicon installer
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -312,7 +309,6 @@ jobs:
 
   release:
     name: Create tagged GitHub Release
-    if: contains(github.ref_name, '-macos-arm64-experimental.')
     needs:
       - build-windows
       - build-macos
@@ -383,11 +379,11 @@ jobs:
           set -euo pipefail
           gh api "repos/${GITHUB_REPOSITORY}/contents/THIRD-PARTY-NOTICES.md?ref=${GITHUB_REF_NAME}" \
             --jq '.path' | grep -Fx 'THIRD-PARTY-NOTICES.md'
-      - name: Create unsigned macOS arm64 experimental pre-release
+      - name: Create unsigned v1.0.0 release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          prerelease: true
+          prerelease: false
           generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
@@ -397,27 +393,27 @@ jobs:
             release-assets/final/SHA256SUMS.txt
             release-assets/final/THIRD-PARTY-NOTICES.md
           body: |
-            这是一个未签名版本。
+            # v1.0.0
+
+            这是一个正式发布的未签名版本。项目长期不提供 Windows Authenticode 签名或 macOS 公证。
 
             Windows：
             - 支持 Windows x64 和原生 ARM64；
             - 不提供 Windows x86。
 
             macOS：
-            - 仅提供 Apple Silicon arm64；
-            - 当前为实验性支持；
+            - 仅提供 Apple Silicon arm64，已完成实机验证；
             - Intel macOS 暂不支持；
-            - GUI 启动自动验证尚未完成；
             - 安装器未签名、未公证。
 
             安全建议：
             - 下载后先使用 SHA256SUMS.txt 校验；
-            - macOS 首次打开被阻止时，使用 Finder 右键 Open；
-            - 或在 System Settings → Privacy & Security → Open Anyway 中手动允许；
+            - macOS 首次打开 DMG 中的 AI Installer.app 被阻止时，打开 System Settings → Privacy & Security；
+            - 在安全提示旁点击 Open Anyway，再输入系统开机密码或使用 Touch ID 确认；
             - 不要关闭 Gatekeeper 或 SIP；
             - 不要执行来源不明的命令。
 
             构建验证：
             - GitHub Actions：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            上游应用的签名状态与本安装器的签名状态分开说明。上游应用来自各自上游项目的 Release，本 Release 不包含 Claude、Codex 或 CC Switch 的上游二进制本体。
+            上游致谢：感谢 CC Switch、Claude App Mirror 和 Codex App Mirror 项目维护者提供开源项目与发布渠道。本安装器不构建、不修改、不托管 Claude/Codex 官方二进制文件。
