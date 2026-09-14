@@ -16,15 +16,15 @@
 Actions artifact 中的 `SHA256SUMS.txt` 校验安装器；只有 SHA-256 匹配的文件才应继续使用。
 
 下载并校验 `ai-installer-macos-arm64.dmg` 后，双击 DMG，在打开的磁盘映像中双击
-`AI Installer.command`。它会由 Terminal 启动真正的安装器，并保留安装日志。
+`AI Installer.app`。它会自动打开 Terminal，启动真正的安装器，并保留安装日志。
 
-如果 macOS 首次打开时阻止 DMG 或命令文件：
+如果 macOS 首次打开时阻止 DMG 或应用：
 
 1. 在 Finder 中右键安装器，选择 `Open`。
 2. 如果仍被阻止，打开 `System Settings` → `Privacy & Security`。
-3. 点击 `Open Anyway`，确认后重新打开安装器。
+3. 点击 `Open Anyway`，确认后重新打开 `AI Installer.app`。
 
-不要关闭 Gatekeeper、SIP 或其他系统安全功能，也不要执行来源不明的命令。
+`.app` 只是 Finder 入口的封装，不会绕过 Gatekeeper。不要关闭 Gatekeeper、SIP 或其他系统安全功能，也不要执行来源不明的命令。
 只对来自本项目 GitHub Release 或 GitHub Actions artifact、且 SHA-256 匹配的 DMG
 进行人工放行。不要直接双击裸 Mach-O 文件；它不是面向 Finder 的公开安装入口。
 

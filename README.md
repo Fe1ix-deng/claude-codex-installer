@@ -85,7 +85,7 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 
 ### 2. 打开 DMG 并运行安装器
 
-双击 `ai-installer-macos-arm64.dmg`，在打开的磁盘映像中双击 `AI Installer.command`。它会由 Terminal 启动安装器，并保留安装日志。
+双击 `ai-installer-macos-arm64.dmg`，在打开的磁盘映像中双击 `AI Installer.app`。它会自动打开 Terminal，启动安装器，并保留安装日志。
 
 ### 3. 首次运行：手动放行 Gatekeeper
 
@@ -93,7 +93,7 @@ shasum -a 256 ai-installer-macos-arm64.dmg
 
 #### 方法一：Finder 右键打开（推荐）
 
-1. 在 Finder 中找到下载的 DMG 或 `AI Installer.command`。
+1. 在 Finder 中找到下载的 DMG 或其中的 `AI Installer.app`。
 2. **按住 Control 键**，同时单击文件，从菜单中选择**打开**（Open）。
 3. 弹窗提示无法验证开发者时，点击**打开**（Open）确认运行。
 
@@ -160,8 +160,8 @@ csrutil disable                      # 关闭 SIP（需重启进恢复模式）
 
 若在运行过程中（而非启动时）遇到以下任一提示，均可按此步骤处理：
 
-- `"AI Installer.command"已损坏，无法打开。您应该将它移到废纸篓。`
-- `无法打开"AI Installer.command"，因为它来自身份不明的开发者。`
+- `"AI Installer.app"已损坏，无法打开。您应该将它移到废纸篓。`
+- `无法打开"AI Installer.app"，因为它来自身份不明的开发者。`
 - 应用被系统 blocked，无法继续
 
 **步骤一**：确认 DMG 已完成 SHA-256 校验，然后打开**系统设置** → **隐私与安全性** → **通用**，确认是否出现"Open Anyway"选项，若有则点击放行。

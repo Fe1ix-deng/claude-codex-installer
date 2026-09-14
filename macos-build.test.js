@@ -14,13 +14,20 @@ test('package scripts define an arm64-only macOS build', () => {
   assert.equal(Object.keys(packageJson.scripts).some((name) => /macos.*x64|x64.*macos/i.test(name)), false);
 });
 
-test('macOS build wraps the executable in a Finder-friendly DMG', () => {
+test('macOS build wraps the executable in a Finder-friendly app bundle DMG', () => {
   const buildScript = fs.readFileSync(path.join(root, 'scripts', 'build-macos-dmg.js'), 'utf8');
   assert.match(buildScript, /node18-macos-arm64/);
   assert.match(buildScript, /ai-installer-macos-arm64\.dmg/);
-  assert.match(buildScript, /AI Installer\.command/);
+  assert.match(buildScript, /AI Installer\.app/);
+  assert.match(buildScript, /infoPlistPath/);
+  assert.match(buildScript, /macOsRoot/);
+  assert.match(buildScript, /CFBundleIdentifier/);
+  assert.match(buildScript, /CFBundleExecutable/);
+  assert.match(buildScript, /osascript/);
+  assert.match(buildScript, /--ci/);
+  assert.match(buildScript, /--print-target/);
+  assert.doesNotMatch(buildScript, /AI Installer\.command/);
   assert.match(buildScript, /hdiutil/);
-  assert.match(buildScript, /\.ai-installer-macos-arm64/);
 });
 
 test('macOS workflow pushes only the experimental branch and validates a real install', () => {
@@ -30,7 +37,12 @@ test('macOS workflow pushes only the experimental branch and validates a real in
   assert.match(workflow, /runs-on:\s*macos-15/);
   assert.match(workflow, /build:macos:arm64/);
   assert.match(workflow, /ai-installer-macos-arm64\.dmg/);
-  assert.match(workflow, /AI Installer\.command/);
+  assert.match(workflow, /AI Installer\.app/);
+  assert.match(workflow, /Contents\/MacOS\/AI Installer/);
+  assert.match(workflow, /Contents\/Info\.plist/);
+  assert.match(workflow, /plutil -lint/);
+  assert.match(workflow, /AI Installer" --print-target/);
+  assert.doesNotMatch(workflow, /AI Installer\.command/);
   assert.doesNotMatch(workflow, /dist\/ai-installer-macos-arm64(?:\s|$)/);
   assert.match(workflow, /--ci/);
   assert.match(workflow, /uname -a/);
