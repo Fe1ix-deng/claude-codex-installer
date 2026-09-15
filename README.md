@@ -30,14 +30,15 @@
 2. 下载并安装 [CC Switch](https://github.com/farion1231/cc-switch)（API 中转站密钥管理工具）
 3. 下载并安装 Claude Desktop 和 Codex（AI 编程助手）
 
-安装完成后，用户还需要访问自己的中转站网站，手动导入或填写 API 密钥，并在 Claude Desktop 和 Codex 中将 API Provider 设置为 CC Switch。本工具当前不提供网页下载页、在线系统检测、软件选择界面或 API 密钥自动写入功能，也不负责后续版本更新。
+安装完成后，用户需要手动在CC Switch中导入或填写 API 密钥，通过CC Switch调用Claude Desktop或Codex。具体使用方法可移步至CC Switch仓库。
+本工具当前不提供网页下载页、在线系统检测、软件选择界面或 API 密钥自动写入功能，也不负责后续版本更新。
 
 使用流程：
 
 1. 从 [Releases 页面](https://github.com/Fe1ix-deng/claude-codex-installer/releases/latest) 手动下载对应平台的主安装器
 2. 启动安装器，程序识别当前系统和架构
 3. 安装器自动下载并安装 CC Switch、Claude Desktop 和 Codex
-4. 安装完成后，手动配置 API 密钥和 Provider
+4. 安装完成后，在CC Switch中手动配置 API 密钥和 Provider
 
 ---
 
