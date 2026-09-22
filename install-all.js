@@ -11,8 +11,13 @@ const {
   getUnsupportedTargetReason,
   getWindowsCompatibilityReason,
 } = require('./platform-support');
-const { getArtifact } = require('./software-manifest');
-const { findChecksumEntry, parseChecksumText, verifyFileSha256 } = require('./checksum');
+const {
+  CC_SWITCH_INSTALL_PATH,
+  getArtifact,
+  getReleaseSpec,
+  getSoftwareConfigs,
+} = require('./software-manifest');
+const { verifyFileSha256 } = require('./checksum');
 const { installDmg: defaultInstallDmg } = require('./macos-installer');
 
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -29,53 +34,9 @@ const INSTALL_RESULT_STATUSES = new Set([
   'dry-run',
 ]);
 
-const SOFTWARE_CONFIG = [
-  {
-    id: 'cc-switch',
-    name: 'CC Switch',
-    repoOwner: 'farion1231',
-    repoName: 'cc-switch',
-    filePattern: /Windows\.msi$/i,
-    excludePattern: /arm64/i,
-    installPath: path.win32.join(
-      process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
-      'Programs',
-      'CC Switch',
-      'CC-Switch.exe',
-    ),
-    autoInstall: true,
-  },
-  {
-    id: 'claude',
-    name: 'Claude Desktop',
-    autoInstall: true,
-  },
-  {
-    id: 'codex',
-    name: 'Codex',
-    autoInstall: true,
-  },
-];
-
-const INSTALL_PATH = SOFTWARE_CONFIG[0].installPath;
-const RELEASE_API_URL = `https://api.github.com/repos/${SOFTWARE_CONFIG[0].repoOwner}/${SOFTWARE_CONFIG[0].repoName}/releases/latest`;
+const SOFTWARE_CONFIG = getSoftwareConfigs();
+const INSTALL_PATH = CC_SWITCH_INSTALL_PATH;
 const REQUEST_TIMEOUT_MS = 15_000;
-
-class ApiResponseFormatError extends Error {
-  constructor() {
-    super('API 响应格式异常');
-    this.name = 'ApiResponseFormatError';
-    this.code = 'INVALID_API_RESPONSE';
-  }
-}
-
-class WindowsInstallerNotFoundError extends Error {
-  constructor() {
-    super('未找到 Windows 版本下载链接');
-    this.name = 'WindowsInstallerNotFoundError';
-    this.code = 'WINDOWS_INSTALLER_NOT_FOUND';
-  }
-}
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -137,56 +98,6 @@ async function checkInstalled(installPath = INSTALL_PATH) {
     }
     throw error;
   }
-}
-
-function requestRelease(apiUrl, httpsGet) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const fail = (error) => {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    };
-
-    let request;
-    try {
-      request = httpsGet(
-        apiUrl,
-        {
-          headers: {
-            Accept: 'application/vnd.github+json',
-            'User-Agent': 'cc-switch-installer/1.0.0',
-          },
-        },
-        (response) => {
-          let body = '';
-          response.setEncoding('utf8');
-          response.on('data', (chunk) => {
-            body += chunk;
-          });
-          response.on('error', fail);
-          response.on('end', () => {
-            if (settled) return;
-            if (response.statusCode < 200 || response.statusCode >= 300) {
-              fail(new Error(`HTTP ${response.statusCode}${response.statusMessage ? ` ${response.statusMessage}` : ''}`));
-              return;
-            }
-            settled = true;
-            resolve(body);
-          });
-        },
-      );
-    } catch (error) {
-      fail(error);
-      return;
-    }
-
-    request.on('error', fail);
-    request.setTimeout(REQUEST_TIMEOUT_MS, () => {
-      request.destroy(new Error(`请求超时（${REQUEST_TIMEOUT_MS / 1000} 秒）`));
-    });
-  });
 }
 
 function fetchText(url, httpsGet = https.get) {
@@ -255,57 +166,133 @@ function fetchText(url, httpsGet = https.get) {
   });
 }
 
-/**
- * Fetch and normalize the latest GitHub Release metadata.
- * The optional httpsGet argument is injectable for deterministic tests.
- */
+function requestRelease(apiUrl, httpsGet = https.get) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const fail = (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    };
+
+    let request;
+    try {
+      request = httpsGet(
+        apiUrl,
+        {
+          headers: {
+            Accept: 'application/vnd.github+json',
+            'User-Agent': 'claude-codex-installer/1.0.0',
+          },
+        },
+        (response) => {
+          let body = '';
+          response.setEncoding('utf8');
+          response.on('data', (chunk) => { body += chunk; });
+          response.on('error', fail);
+          response.on('end', () => {
+            if (settled) return;
+            if (response.statusCode < 200 || response.statusCode >= 300) {
+              fail(new Error(`HTTP ${response.statusCode}${response.statusMessage ? ` ${response.statusMessage}` : ''}`));
+              return;
+            }
+            settled = true;
+            resolve(body);
+          });
+        },
+      );
+    } catch (error) {
+      fail(error);
+      return;
+    }
+
+    request.on('error', fail);
+    request.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      request.destroy(new Error(`请求超时（${REQUEST_TIMEOUT_MS / 1000} 秒）`));
+    });
+  });
+}
+
 async function getLatestVersion(
   repoOwner,
   repoName,
-  filePattern,
-  excludePattern = null,
+  assetPattern,
+  checksumAssetPattern = null,
   httpsGet = https.get,
 ) {
   const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`;
-  const body = await requestRelease(apiUrl, httpsGet);
   let release;
   try {
-    release = JSON.parse(body);
-  } catch (_error) {
-    throw new ApiResponseFormatError();
+    release = JSON.parse(await requestRelease(apiUrl, httpsGet));
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      const invalid = new Error('GitHub Release API 返回的 JSON 无效');
+      invalid.code = 'INVALID_API_RESPONSE';
+      throw invalid;
+    }
+    throw error;
   }
 
-  if (
-    !release
-    || typeof release.tag_name !== 'string'
-    || release.tag_name.length === 0
-    || !Array.isArray(release.assets)
-  ) {
-    throw new ApiResponseFormatError();
+  if (!release || typeof release.tag_name !== 'string' || !Array.isArray(release.assets)) {
+    const invalid = new Error('GitHub Release API 响应格式异常');
+    invalid.code = 'INVALID_API_RESPONSE';
+    throw invalid;
   }
 
-  const setupAsset = release.assets.find(
-    (asset) => asset
-      && typeof asset.name === 'string'
-      && filePattern.test(asset.name)
-      && (!excludePattern || !excludePattern.test(asset.name))
-      && typeof asset.browser_download_url === 'string',
-  );
-
+  const setupAsset = release.assets.find((asset) => asset
+    && typeof asset.name === 'string'
+    && assetPattern.test(asset.name)
+    && typeof asset.browser_download_url === 'string'
+    && Number.isInteger(asset.size)
+    && asset.size > 0
+    && typeof asset.digest === 'string'
+    && /^sha256:[a-f0-9]{64}$/i.test(asset.digest));
   if (!setupAsset) {
-    throw new WindowsInstallerNotFoundError();
+    const error = new Error(`GitHub Release ${release.tag_name} 中未找到匹配的安装资产`);
+    error.code = 'RELEASE_ASSET_NOT_FOUND';
+    throw error;
   }
 
-  const checksumAsset = release.assets.find(
-    (asset) => asset
-      && asset.name === 'SHA256SUMS.txt'
-      && typeof asset.browser_download_url === 'string',
-  );
+  const checksumAsset = checksumAssetPattern
+    ? release.assets.find((asset) => asset
+      && typeof asset.name === 'string'
+      && checksumAssetPattern.test(asset.name)
+      && typeof asset.browser_download_url === 'string')
+    : null;
 
   return {
     version: release.tag_name,
+    sourceReleaseUrl: typeof release.html_url === 'string'
+      ? release.html_url
+      : `https://github.com/${repoOwner}/${repoName}/releases/tag/${encodeURIComponent(release.tag_name)}`,
     downloadUrl: setupAsset.browser_download_url,
+    filename: setupAsset.name,
+    size: setupAsset.size,
+    sha256: setupAsset.digest.slice('sha256:'.length).toLowerCase(),
     checksumUrl: checksumAsset ? checksumAsset.browser_download_url : null,
+  };
+}
+
+async function resolveLatestArtifact(softwareId, target, httpsGet = https.get) {
+  const artifact = getArtifact(softwareId, target);
+  if (!artifact) return null;
+  const spec = getReleaseSpec(softwareId, target);
+  const latest = await getLatestVersion(
+    spec.owner,
+    spec.repo,
+    spec.assetPattern,
+    spec.checksumAssetPattern,
+    httpsGet,
+  );
+  return {
+    ...artifact,
+    url: artifact.downloadUrlTemplate || latest.downloadUrl,
+    filename: latest.filename,
+    sourceReleaseUrl: latest.sourceReleaseUrl,
+    checksumUrl: artifact.checksumUrlTemplate || latest.checksumUrl,
+    sha256: latest.sha256,
+    size: latest.size,
   };
 }
 
@@ -720,7 +707,12 @@ async function installExe(exePath, spawnProcess = spawn, platform = process.plat
 
 async function installSoftware(config, spawnProcess = spawn, options = {}) {
   const target = options.target || detectTarget();
-  const artifact = getArtifact(config.id, target);
+  const artifactResolver = options.getArtifact || ((softwareId, resolvedTarget) => (
+    options.resolveLatest === false
+      ? getArtifact(softwareId, resolvedTarget)
+      : resolveLatestArtifact(softwareId, resolvedTarget, options.httpsGet || https.get)
+  ));
+  const artifact = await artifactResolver(config.id, target);
   const isMacOs = target.platform === 'darwin';
   let operationResult;
   let ownedMacDownloadDir = false;
@@ -737,6 +729,41 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
       console.log('[提示] 当前下载源只提供 Windows x64 和 ARM64；如需兼容旧系统，请自行寻找厂商旧版。');
     }
     return { status: target.platform === 'darwin' ? 'not-tested' : 'unsupported' };
+  }
+
+  const removePreflightCache = async () => {
+    const downloadDir = options.downloadDir || (!isMacOs
+      ? path.join(os.homedir(), 'Downloads', 'AI工具安装包')
+      : null);
+    if (!downloadDir || typeof artifact.filename !== 'string' || path.basename(artifact.filename) !== artifact.filename) return;
+    try {
+      await (options.fsModule || fs).promises.unlink(path.join(downloadDir, artifact.filename));
+      console.log('[提示] 已删除完整性信息不完整的缓存文件');
+    } catch (error) {
+      if (error.code !== 'ENOENT') console.log(`[警告] 无法删除完整性信息不完整的缓存文件: ${error.message}`);
+    }
+  };
+
+  if (typeof artifact.sha256 !== 'string' || artifact.sha256.trim().length === 0) {
+    const error = new Error(`资源缺少 SHA-256 校验信息: ${artifact.filename}`);
+    error.code = 'CHECKSUM_MISSING';
+    console.log(`[错误] ${error.message}`);
+    await removePreflightCache();
+    return { status: 'failed', code: error.code, error };
+  }
+  if (!/^[a-f0-9]{64}$/i.test(artifact.sha256.trim())) {
+    const error = new Error(`资源 SHA-256 格式无效: ${artifact.filename}`);
+    error.code = 'CHECKSUM_INVALID';
+    console.log(`[错误] ${error.message}`);
+    await removePreflightCache();
+    return { status: 'failed', code: error.code, error };
+  }
+  if (!Number.isInteger(artifact.size) || artifact.size <= 0) {
+    const error = new Error(`资源缺少有效文件大小: ${artifact.filename}`);
+    error.code = 'FILE_SIZE_MISSING';
+    console.log(`[错误] ${error.message}`);
+    await removePreflightCache();
+    return { status: 'failed', code: error.code, error };
   }
 
   const compatibilityReason = artifact.installerType === 'msix'
@@ -766,7 +793,7 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
   const downloadUrl = artifact.url;
   console.log(`[版本] 目标架构: ${isMacOs ? `macOS ${target.arch}` : `Windows ${target.arch}`}`);
   console.log(`[版本] 下载链接: ${downloadUrl}`);
-  console.log(`[版本] 校验文件: ${artifact.checksumUrl || '未提供'}`);
+  console.log(`[版本] 校验来源: GitHub Release API asset.digest${artifact.checksumUrl ? `；校验清单: ${artifact.checksumUrl}` : ''}`);
   let downloadDir;
   let destPath;
   let cleanupMacDownloadDir = async () => {};
@@ -799,50 +826,27 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
     await download(downloadUrl, destPath, options.httpsGet || https.get);
     console.log(`[下载] 下载完成: ${destPath}`);
 
-    if (isMacOs) {
-      const checksumFs = options.fsModule || fs;
-      await verifyDownloadedFileSize(destPath, artifact.size, checksumFs);
-      console.log(`[校验] 文件大小通过: ${formatBytes(artifact.size)}`);
-      if (!artifact.sha256) {
-        const error = new Error(`macOS 资源缺少固定 SHA-256: ${artifact.filename}`);
-        error.code = 'CHECKSUM_MISSING';
-        throw error;
-      }
-      const verify = options.verifyFileSha256 || verifyFileSha256;
-      let actualChecksum = null;
-      await verify(destPath, artifact.sha256, checksumFs, ({ actual } = {}) => {
-        actualChecksum = actual || null;
-      });
-      console.log('[校验] SHA-256 校验通过');
-      console.log(`checksum: ${JSON.stringify({
-        application: config.name,
-        filename: artifact.filename,
-        size: artifact.size,
-        expected: artifact.sha256,
-        actual: actualChecksum,
-        status: 'passed',
-      })}`);
-    } else if (artifact.checksumUrl) {
-      try {
-        const checksumText = await fetchText(artifact.checksumUrl, options.httpsGet || https.get);
-        const checksumMap = parseChecksumText(checksumText);
-        const match = findChecksumEntry(checksumMap, {
-          softwareName: config.id,
-          arch: target.arch,
-          filename: artifact.filename,
-        });
-        if (!match) {
-          console.log(`[警告] 校验文件中未找到 ${artifact.filename}，跳过 SHA-256 校验`);
-        } else {
-          const verify = options.verifyFileSha256 || verifyFileSha256;
-          await verify(destPath, match.checksum, options.fsModule || fs);
-          console.log('[校验] SHA-256 校验通过');
-        }
-      } catch (error) {
-        if (error && (error.code === 'CHECKSUM_MISMATCH' || error.code === 'CHECKSUM_AMBIGUOUS')) throw error;
-        console.log(`[警告] 无法获取或解析校验文件: ${error.message}`);
-      }
-    }
+    const checksumFs = options.fsModule || fs;
+    const verifySize = options.verifyDownloadedFileSize || verifyDownloadedFileSize;
+    await verifySize(destPath, artifact.size, checksumFs);
+    console.log(`[校验] 文件大小通过: ${formatBytes(artifact.size)}`);
+
+    const expectedChecksum = artifact.sha256.trim().toLowerCase();
+    const verify = options.verifyFileSha256 || verifyFileSha256;
+    let actualChecksum = null;
+    await verify(destPath, expectedChecksum, checksumFs, ({ actual } = {}) => {
+      actualChecksum = actual || expectedChecksum;
+    });
+    actualChecksum = actualChecksum || expectedChecksum;
+    console.log('[校验] SHA-256 校验通过');
+    console.log(`checksum: ${JSON.stringify({
+      application: config.name,
+      filename: artifact.filename,
+      size: artifact.size,
+      expected: expectedChecksum,
+      actual: actualChecksum,
+      status: 'passed',
+    })}`);
 
     if (config.autoInstall) {
       if (isMacOs) {
@@ -945,7 +949,13 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
       operationResult = { status: 'not-tested', installPath: destPath };
     }
   } catch (error) {
-    if (error && ['CHECKSUM_MISMATCH', 'FILE_SIZE_MISMATCH', 'FILE_SIZE_MISSING', 'CHECKSUM_MISSING'].includes(error.code)) {
+    if (error && [
+      'CHECKSUM_INVALID',
+      'CHECKSUM_MISMATCH',
+      'CHECKSUM_MISSING',
+      'FILE_SIZE_MISMATCH',
+      'FILE_SIZE_MISSING',
+    ].includes(error.code)) {
       if (error.code.startsWith('FILE_SIZE')) {
         console.log(`[错误] 本地文件大小校验失败: ${error.message}`);
       } else {
@@ -959,12 +969,6 @@ async function installSoftware(config, spawnProcess = spawn, options = {}) {
           console.log(`[警告] 无法删除校验失败的缓存文件: ${cleanupError.message}`);
         }
       }
-      operationResult = { status: 'failed', code: error.code };
-      await cleanupMacDownloadDir();
-      return operationResult;
-    }
-    if (error && error.code === 'CHECKSUM_AMBIGUOUS') {
-      console.log(`[错误] 校验清单歧义: ${error.message}`);
       operationResult = { status: 'failed', code: error.code };
       await cleanupMacDownloadDir();
       return operationResult;
@@ -1086,10 +1090,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  ApiResponseFormatError,
   INSTALL_PATH,
-  RELEASE_API_URL,
-  WindowsInstallerNotFoundError,
   checkInstalled,
   downloadFile,
   DRY_RUN,
@@ -1100,6 +1101,7 @@ module.exports = {
   fetchText,
   formatBytes,
   getLatestVersion,
+  resolveLatestArtifact,
   installExe,
   installMsi,
   installMsix,

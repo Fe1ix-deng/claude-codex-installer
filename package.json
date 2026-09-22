@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "node --test --test-concurrency=1",
+    "validate:manifest": "node manifest-validation.js",
     "build:win:x64": "pkg install-all.js --target node18-win-x64 --output dist/ai-installer-win-x64.exe",
     "build:win:arm64": "pkg install-all.js --target node18-win-arm64 --output dist/ai-installer-win-arm64.exe",
     "build:win": "npm run build:win:x64 && npm run build:win:arm64",

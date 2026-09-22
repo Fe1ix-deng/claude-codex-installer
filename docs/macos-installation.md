@@ -6,6 +6,12 @@
 - macOS Apple Silicon（`darwin/arm64`）：v1.0.0 已完成实机验证，正式支持。
 - macOS Intel（`darwin/x64`）：不支持，也不提供 Intel 产物。
 
+## 仓库与 manifest
+
+唯一项目根目录和唯一 Git 仓库位于共享外层目录的 `win-verify-macos-arm64/`。构建、测试和 Release 必须从该目录执行；外层旧源码副本不再维护。
+
+macOS 上游 DMG 的 GitHub 仓库、资产匹配规则、官方 CDN 短链、Bundle ID、主可执行文件、App 名称、二进制架构和最低系统版本均由 `software-manifest.js` 管理。安装时调用对应仓库的 GitHub Release API `releases/latest` 获取 `size` 和 `sha256` digest；Claude 使用 `https://claudeapp.agentsmirror.com/latest/mac`，Codex Apple Silicon 使用 `https://codexapp.agentsmirror.com/latest/mac-arm64` 下载 DMG。下载大小或哈希与 API 资产不匹配时，安装器不会挂载 DMG。
+
 ## 下载、校验与首次运行
 
 1. 用户先从项目 [GitHub Release 页面](https://github.com/Fe1ix-deng/claude-codex-installer/releases/latest) 手动下载 `ai-installer-macos-arm64.dmg` 和 `SHA256SUMS.txt`。当前没有网页自动检测或自动选择下载功能。

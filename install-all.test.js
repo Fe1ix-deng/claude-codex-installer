@@ -10,6 +10,8 @@ const test = require('node:test');
 
 const {
   fetchText,
+  getLatestVersion,
+  resolveLatestArtifact,
   installMsix,
   installSoftware,
   INSTALL_PATH,
@@ -19,10 +21,46 @@ const {
   waitForExit,
 } = require('./install-all');
 const { detectTarget } = require('./platform-support');
+const { getArtifact } = require('./software-manifest');
 
 async function writeMacArtifact(destination, size) {
   await fs.promises.writeFile(destination, 'dmg');
   await fs.promises.truncate(destination, size);
+}
+
+function fixtureArtifact(config, target) {
+  const base = getArtifact(config.id, target);
+  if (!base) return null;
+  const key = `${config.id}/${target.platform}/${target.arch}`;
+  const fixtures = {
+    'cc-switch/win32/x64': ['CC-Switch-v3.20.3-Windows.msi', 13606912],
+    'cc-switch/win32/arm64': ['CC-Switch-v3.20.3-Windows-arm64.msi', 12877824],
+    'cc-switch/darwin/arm64': ['CC-Switch-v3.20.3-macOS.dmg', 28111538],
+    'claude/win32/x64': ['Claude-win-x64.msix', 283622408],
+    'claude/win32/arm64': ['Claude-win-arm64.msix', 277383181],
+    'claude/darwin/arm64': ['Claude-mac-universal.dmg', 353897855],
+    'codex/win32/x64': ['OpenAI.Codex_26.908.9136.0_x64__2p2nqsd0c76g0.Msix', 774919598],
+    'codex/win32/arm64': ['OpenAI.Codex_26.908.9136.0_arm64__2p2nqsd0c76g0.Msix', 771727321],
+    'codex/darwin/arm64': ['Codex-mac-arm64.dmg', 643007873],
+  };
+  const [filename, size] = fixtures[key];
+  return {
+    ...base,
+    url: `https://github.com/${base.releaseOwner}/${base.releaseRepo}/releases/download/test/${filename}`,
+    filename,
+    sourceReleaseUrl: `https://github.com/${base.releaseOwner}/${base.releaseRepo}/releases/tag/test`,
+    sha256: 'a'.repeat(64),
+    size,
+  };
+}
+
+async function installWithStaticArtifact(config, spawnProcess, options = {}) {
+  const target = options.target || detectTarget();
+  return installSoftware(config, spawnProcess, {
+    ...options,
+    resolveLatest: false,
+    getArtifact: options.getArtifact || (() => fixtureArtifact(config, target)),
+  });
 }
 
 test('waitForExit waits for a keypress before closing readline', async () => {
@@ -105,11 +143,138 @@ test('fetchText follows relative HTTP redirects and returns the final body', asy
     return request;
   };
 
-  assert.equal(await fetchText('https://codexapp.agentsmirror.com/latest/checksums', fakeHttpsGet), 'checksum text');
+  assert.equal(await fetchText('https://github.com/Wangnov/codex-app-mirror/releases/latest/checksums', fakeHttpsGet), 'checksum text');
   assert.deepEqual(calls, [
-    'https://codexapp.agentsmirror.com/latest/checksums',
-    'https://codexapp.agentsmirror.com/r2/checksums',
+    'https://github.com/Wangnov/codex-app-mirror/releases/latest/checksums',
+    'https://github.com/r2/checksums',
   ]);
+});
+
+test('getLatestVersion selects the requested GitHub Release asset and digest', async () => {
+  const calls = [];
+  const fakeHttpsGet = (url, options, callback) => {
+    calls.push({ url, options });
+    const request = new EventEmitter();
+    request.setTimeout = () => request;
+    process.nextTick(() => {
+      const response = new EventEmitter();
+      response.statusCode = 200;
+      response.setEncoding = () => {};
+      callback(response);
+      response.emit('data', JSON.stringify({
+        tag_name: 'claude-app-v2.2553.0',
+        html_url: 'https://github.com/Wangnov/claude-app-mirror/releases/tag/claude-app-v2.2553.0',
+        assets: [
+          {
+            name: 'Claude-win-arm64.msix',
+            browser_download_url: 'https://github.com/Wangnov/claude-app-mirror/releases/download/claude-app-v2.2553.0/Claude-win-arm64.msix',
+            size: 278510303,
+            digest: 'sha256:8f7f1cbc3440c5610172eefffdfecbe27bbb3ef7b9b2292879b30d4a87ba25bf',
+          },
+          {
+            name: 'Claude-win-x64.msix',
+            browser_download_url: 'https://github.com/Wangnov/claude-app-mirror/releases/download/claude-app-v2.2553.0/Claude-win-x64.msix',
+            size: 284803588,
+            digest: 'sha256:9d3d1843ac7e537cf568e2f1b090d3c3584942ed505b79f2f9401358c5d0edd4',
+          },
+          {
+            name: 'SHA256SUMS.txt',
+            browser_download_url: 'https://github.com/Wangnov/claude-app-mirror/releases/download/claude-app-v2.2553.0/SHA256SUMS.txt',
+            size: 353,
+            digest: 'sha256:597e51254155866f8bf47b12d2b3754d16f4ad4cfde2328bb1d5df199cef29cd',
+          },
+        ],
+      }));
+      response.emit('end');
+    });
+    return request;
+  };
+
+  const result = await getLatestVersion(
+    'Wangnov',
+    'claude-app-mirror',
+    /^Claude-win-x64\.msix$/i,
+    /^SHA256SUMS\.txt$/i,
+    fakeHttpsGet,
+  );
+
+  assert.equal(calls[0].url, 'https://api.github.com/repos/Wangnov/claude-app-mirror/releases/latest');
+  assert.equal(calls[0].options.headers.Accept, 'application/vnd.github+json');
+  assert.equal(result.version, 'claude-app-v2.2553.0');
+  assert.equal(result.filename, 'Claude-win-x64.msix');
+  assert.equal(result.size, 284803588);
+  assert.equal(result.sha256, '9d3d1843ac7e537cf568e2f1b090d3c3584942ed505b79f2f9401358c5d0edd4');
+  assert.match(result.downloadUrl, /github\.com\/Wangnov\/claude-app-mirror\/releases\/download\/claude-app-v2\.2553\.0/);
+  assert.match(result.checksumUrl, /SHA256SUMS\.txt$/);
+});
+
+test('resolveLatestArtifact uses GitHub API metadata and official R2 CDN downloads', async () => {
+  const responses = {
+    claude: {
+      tag_name: 'claude-app-v2.2553.0',
+      html_url: 'https://github.com/Wangnov/claude-app-mirror/releases/tag/claude-app-v2.2553.0',
+      assets: [{
+        name: 'Claude-win-x64.msix',
+        browser_download_url: 'https://github.com/Wangnov/claude-app-mirror/releases/download/claude-app-v2.2553.0/Claude-win-x64.msix',
+        size: 284803588,
+        digest: 'sha256:9d3d1843ac7e537cf568e2f1b090d3c3584942ed505b79f2f9401358c5d0edd4',
+      }, {
+        name: 'Claude-mac-universal.dmg',
+        browser_download_url: 'https://github.com/Wangnov/claude-app-mirror/releases/download/claude-app-v2.2553.0/Claude-mac-universal.dmg',
+        size: 370826764,
+        digest: 'sha256:2882bb7efe47d7c43e0a809db8429d976b970f5a135aac47c90a4f8c7eef0006',
+      }],
+    },
+    codex: {
+      tag_name: 'codex-app-26.915.31029',
+      html_url: 'https://github.com/Wangnov/codex-app-mirror/releases/tag/codex-app-26.915.31029',
+      assets: [{
+        name: 'OpenAI.Codex_26.915.3509.0_x64__2p2nqsd0c76g0.Msix',
+        browser_download_url: 'https://github.com/Wangnov/codex-app-mirror/releases/download/codex-app-26.915.31029/OpenAI.Codex_26.915.3509.0_x64__2p2nqsd0c76g0.Msix',
+        size: 824604631,
+        digest: 'sha256:3ef364eec7bde303c17af12481ea19724e162e771d6baa589aee37e64324c80c',
+      }, {
+        name: 'Codex-mac-arm64.dmg',
+        browser_download_url: 'https://github.com/Wangnov/codex-app-mirror/releases/download/codex-app-26.915.31029/Codex-mac-arm64.dmg',
+        size: 645200049,
+        digest: 'sha256:f4bc8e95f921f45c3f1d1891ead21eafdbe8e40612eb34cf0be173988c1996dd',
+      }],
+    },
+  };
+  const calls = [];
+  const fakeHttpsGet = (url, _options, callback) => {
+    calls.push(url);
+    const request = new EventEmitter();
+    request.setTimeout = () => request;
+    process.nextTick(() => {
+      const response = new EventEmitter();
+      response.statusCode = 200;
+      response.setEncoding = () => {};
+      callback(response);
+      const key = url.includes('claude-app-mirror') ? 'claude' : 'codex';
+      response.emit('data', JSON.stringify(responses[key]));
+      response.emit('end');
+    });
+    return request;
+  };
+
+  const claude = await resolveLatestArtifact('claude', { platform: 'win32', arch: 'x64' }, fakeHttpsGet);
+  const codex = await resolveLatestArtifact('codex', { platform: 'win32', arch: 'x64' }, fakeHttpsGet);
+  const claudeMac = await resolveLatestArtifact('claude', { platform: 'darwin', arch: 'arm64' }, fakeHttpsGet);
+  const codexMac = await resolveLatestArtifact('codex', { platform: 'darwin', arch: 'arm64' }, fakeHttpsGet);
+
+  assert.deepEqual(calls, [
+    'https://api.github.com/repos/Wangnov/claude-app-mirror/releases/latest',
+    'https://api.github.com/repos/Wangnov/codex-app-mirror/releases/latest',
+    'https://api.github.com/repos/Wangnov/claude-app-mirror/releases/latest',
+    'https://api.github.com/repos/Wangnov/codex-app-mirror/releases/latest',
+  ]);
+  assert.equal(claude.sourceReleaseUrl, responses.claude.html_url);
+  assert.equal(codex.sourceReleaseUrl, responses.codex.html_url);
+  assert.equal(claude.url, 'https://claudeapp.agentsmirror.com/latest/win-x64');
+  assert.equal(codex.url, 'https://codexapp.agentsmirror.com/latest/win-x64');
+  assert.equal(claudeMac.url, 'https://claudeapp.agentsmirror.com/latest/mac');
+  assert.equal(codexMac.url, 'https://codexapp.agentsmirror.com/latest/mac-arm64');
 });
 
 test('fetchText rejects after the redirect limit', async () => {
@@ -451,18 +616,23 @@ test('Claude and Codex installSoftware use PowerShell MSIX installation on Windo
 
   for (const config of SOFTWARE_CONFIG.filter((entry) => entry.id === 'claude' || entry.id === 'codex')) {
     const downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-msix-'));
-    await installSoftware(config, fakeSpawn, {
+    await installWithStaticArtifact(config, fakeSpawn, {
       target: { platform: 'win32', arch: 'x64', isWindows: true },
       downloadDir,
       downloadFile: async (_url, destination) => fs.promises.writeFile(destination, 'msix'),
       httpsGet: fakeHttpsGet,
+      verifyDownloadedFileSize: async () => true,
+      verifyFileSha256: async () => true,
     });
   }
 
   assert.equal(invocations.length, 2);
   assert.deepEqual(invocations.map((invocation) => invocation.command), ['powershell.exe', 'powershell.exe']);
   assert.match(invocations[0].args.find((arg) => /Claude-win-x64\.msix/.test(arg)), /Claude-win-x64\.msix/);
-  assert.match(invocations[1].args.find((arg) => /Codex-Windows-x64\.msix/.test(arg)), /Codex-Windows-x64\.msix/);
+  assert.match(
+    invocations[1].args.find((arg) => /OpenAI\.Codex_.*_x64__.*\.Msix/.test(arg)),
+    /OpenAI\.Codex_.*_x64__.*\.Msix/,
+  );
 });
 
 test('installSoftware stores manifest downloads in the user Downloads folder', () => {
@@ -476,17 +646,81 @@ test('installSoftware stores manifest downloads in the user Downloads folder', (
 
 test('installSoftware skips unsupported Windows x86 before download', async () => {
   let downloaded = false;
-  await installSoftware(SOFTWARE_CONFIG[0], undefined, {
+  await installWithStaticArtifact(SOFTWARE_CONFIG[0], undefined, {
     target: { platform: 'win32', arch: 'x86', isWindows: true },
     downloadFile: async () => { downloaded = true; },
   });
   assert.equal(downloaded, false);
 });
 
+test('installSoftware blocks incomplete manifest integrity metadata before download', async () => {
+  let downloaded = false;
+  let checksumFetched = false;
+  const downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-missing-checksum-'));
+  const cachedPath = path.join(downloadDir, 'app.msi');
+  await fs.promises.writeFile(cachedPath, 'untrusted cache');
+  const result = await installWithStaticArtifact(SOFTWARE_CONFIG[0], undefined, {
+    target: { platform: 'win32', arch: 'x64', isWindows: true },
+    getArtifact: () => ({
+      softwareId: 'cc-switch',
+      displayName: 'CC Switch',
+      platform: 'win32',
+      arch: 'x64',
+      url: 'https://example.com/app.msi',
+      filename: 'app.msi',
+      installerType: 'msi',
+      size: 1,
+      sha256: null,
+      checksumUrl: 'https://github.com/example/example/releases/download/v1/SHA256SUMS.txt',
+    }),
+    downloadDir,
+    downloadFile: async () => { downloaded = true; },
+    httpsGet: () => { checksumFetched = true; },
+  });
+
+  assert.equal(downloaded, false);
+  assert.equal(checksumFetched, false);
+  await assert.rejects(fs.promises.access(cachedPath), (error) => error.code === 'ENOENT');
+  assert.equal(result.status, 'failed');
+  assert.equal(result.code, 'CHECKSUM_MISSING');
+});
+
+test('installSoftware verifies Windows artifacts with the fixed manifest SHA-256', async () => {
+  const claude = SOFTWARE_CONFIG.find((config) => config.id === 'claude');
+  const artifact = fixtureArtifact(claude, { platform: 'win32', arch: 'x64' });
+  const calls = [];
+  let checksumFetched = false;
+  const fakeSpawn = () => {
+    const child = new EventEmitter();
+    process.nextTick(() => child.emit('close', 0));
+    return child;
+  };
+
+  const result = await installWithStaticArtifact(claude, fakeSpawn, {
+    target: { platform: 'win32', arch: 'x64', isWindows: true },
+    downloadDir: await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-fixed-checksum-')),
+    downloadFile: async (_url, destination) => fs.promises.writeFile(destination, 'fixture'),
+    verifyDownloadedFileSize: async (_filePath, expectedSize) => {
+      calls.push(['size', expectedSize]);
+    },
+    verifyFileSha256: async (_filePath, expectedSha256) => {
+      calls.push(['sha256', expectedSha256]);
+    },
+    httpsGet: () => { checksumFetched = true; },
+  });
+
+  assert.equal(result.status, 'installed');
+  assert.equal(checksumFetched, false);
+  assert.deepEqual(calls, [
+    ['size', artifact.size],
+    ['sha256', artifact.sha256],
+  ]);
+});
+
 test('installSoftware skips non-Windows targets without spawning installers', async () => {
   let downloaded = false;
   let spawned = false;
-  await installSoftware(SOFTWARE_CONFIG[0], () => { spawned = true; }, {
+  await installWithStaticArtifact(SOFTWARE_CONFIG[0], () => { spawned = true; }, {
     target: { platform: 'darwin', arch: 'x64', isWindows: false },
     downloadFile: async () => { downloaded = true; },
   });
@@ -497,7 +731,7 @@ test('installSoftware skips non-Windows targets without spawning installers', as
 test('installSoftware preflights legacy Windows before downloading MSIX', async () => {
   let downloaded = false;
   const claude = SOFTWARE_CONFIG.find((config) => config.id === 'claude');
-  await installSoftware(claude, undefined, {
+  await installWithStaticArtifact(claude, undefined, {
     target: { platform: 'win32', arch: 'x64', isWindows: true, windowsBuild: 17134 },
     downloadFile: async () => { downloaded = true; },
   });
@@ -513,7 +747,7 @@ test('installSoftware reads and blocks legacy Windows before downloading Claude 
       arch: 'x64',
       windowsBuildReader: () => 7601,
     });
-    await installSoftware(config, undefined, {
+    await installWithStaticArtifact(config, undefined, {
       target,
       downloadDir: await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-test-')),
       downloadFile: async () => { downloaded = true; },
@@ -534,7 +768,7 @@ test('installSoftware reports unknown Windows build before downloading MSIX', as
       arch: 'x64',
       windowsBuildReader: () => undefined,
     });
-    await installSoftware(claude, undefined, {
+    await installWithStaticArtifact(claude, undefined, {
       target,
       downloadDir: await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-test-')),
       downloadFile: async () => { downloaded = true; },
@@ -553,7 +787,7 @@ test('installSoftware does not apply MSIX build preflight to CC Switch MSI', asy
     arch: 'x64',
     windowsBuildReader: () => undefined,
   });
-  await installSoftware(SOFTWARE_CONFIG[0], undefined, {
+  await installWithStaticArtifact(SOFTWARE_CONFIG[0], undefined, {
     target,
     downloadDir: await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-test-')),
     downloadFile: async () => { downloaded = true; },
@@ -571,14 +805,19 @@ test('installSoftware dispatches the ARM64 MSI artifact on Windows ARM64', async
     return child;
   };
   const downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-test-'));
-  await installSoftware(SOFTWARE_CONFIG[0], fakeSpawn, {
-    target: { platform: 'win32', arch: 'arm64', isWindows: true },
-    downloadDir,
-    downloadFile: async (url) => { downloadedUrl = url; },
+  await installWithStaticArtifact(SOFTWARE_CONFIG[0], fakeSpawn, {
+      target: { platform: 'win32', arch: 'arm64', isWindows: true },
+      downloadDir,
+    downloadFile: async (url, destination) => {
+      downloadedUrl = url;
+      await fs.promises.writeFile(destination, 'msi');
+    },
+    verifyDownloadedFileSize: async () => true,
+    verifyFileSha256: async () => true,
   });
-  assert.equal(downloadedUrl, 'https://dl.ccswitch.io/v3.20.1/CC-Switch-v3.20.1-Windows-arm64.msi');
+  assert.equal(downloadedUrl, 'https://github.com/farion1231/cc-switch/releases/download/test/CC-Switch-v3.20.3-Windows-arm64.msi');
   assert.equal(spawned.command, 'msiexec');
-  assert.equal(spawned.args[1], path.join(downloadDir, 'CC-Switch-v3.20.1-Windows-arm64.msi'));
+  assert.equal(spawned.args[1], path.join(downloadDir, 'CC-Switch-v3.20.3-Windows-arm64.msi'));
 });
 
 test('installSoftware blocks MSIX install when checksum verification mismatches', async () => {
@@ -598,11 +837,12 @@ test('installSoftware blocks MSIX install when checksum verification mismatches'
     return request;
   };
   const claude = SOFTWARE_CONFIG.find((config) => config.id === 'claude');
-  await installSoftware(claude, () => { spawned = true; }, {
+  await installWithStaticArtifact(claude, () => { spawned = true; }, {
     target: { platform: 'win32', arch: 'x64', isWindows: true },
     downloadDir: await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-test-')),
-    downloadFile: async () => {},
+    downloadFile: async (_url, destination) => fs.promises.writeFile(destination, 'msix'),
     httpsGet: fakeHttpsGet,
+    verifyDownloadedFileSize: async () => true,
     verifyFileSha256: async () => {
       verified = true;
       const error = new Error('mismatch');
@@ -651,22 +891,24 @@ test('checksum mismatch removes the cached artifact and allows a later retry', a
     return child;
   };
 
-  await installSoftware(claude, fakeSpawn, {
+  await installWithStaticArtifact(claude, fakeSpawn, {
     target: { platform: 'win32', arch: 'x64', isWindows: true },
     downloadDir,
     downloadFile,
     httpsGet: fakeHttpsGet,
+    verifyDownloadedFileSize: async () => true,
     verifyFileSha256: verifier,
   });
   const destination = path.join(downloadDir, 'Claude-win-x64.msix');
   assert.equal(await fs.promises.access(destination).then(() => true, () => false), false);
   assert.equal(spawnCount, 0);
 
-  await installSoftware(claude, fakeSpawn, {
+  await installWithStaticArtifact(claude, fakeSpawn, {
     target: { platform: 'win32', arch: 'x64', isWindows: true },
     downloadDir,
     downloadFile,
     httpsGet: fakeHttpsGet,
+    verifyDownloadedFileSize: async () => true,
     verifyFileSha256: verifier,
   });
   assert.equal(downloadCount, 2);
@@ -693,7 +935,7 @@ test('installSoftware installs audited macOS arm64 artifacts only after fixed ch
 
   let result;
   try {
-    result = await installSoftware(claude, () => {
+    result = await installWithStaticArtifact(claude, () => {
       throw new Error('Windows installer spawned');
     }, {
       target: { platform: 'darwin', arch: 'arm64', isWindows: false },
@@ -713,7 +955,7 @@ test('installSoftware installs audited macOS arm64 artifacts only after fixed ch
     appPath: path.join(downloadDir, 'Applications', 'Claude.app'),
   });
   assert.deepEqual(calls.map(([name]) => name), ['download', 'checksum', 'install']);
-  assert.equal(calls[1][2], 'c5451dba21b8bf4232f8feffbff946dc7be4d6a64ee22d3190954e16f62444c9');
+  assert.equal(calls[1][2], 'a'.repeat(64));
   assert.match(calls[2][1], /Claude-mac-universal\.dmg$/);
   assert.match(calls[2][2], /Applications$/);
   const checksumLine = output.lines.find((line) => line.startsWith('checksum: '));
@@ -722,8 +964,8 @@ test('installSoftware installs audited macOS arm64 artifacts only after fixed ch
     application: 'Claude Desktop',
     filename: 'Claude-mac-universal.dmg',
     size: 353897855,
-    expected: 'c5451dba21b8bf4232f8feffbff946dc7be4d6a64ee22d3190954e16f62444c9',
-    actual: 'c5451dba21b8bf4232f8feffbff946dc7be4d6a64ee22d3190954e16f62444c9',
+    expected: 'a'.repeat(64),
+    actual: 'a'.repeat(64),
     status: 'passed',
   });
 });
@@ -732,7 +974,7 @@ test('installSoftware removes a macOS DMG and skips mounting when fixed checksum
   const codex = SOFTWARE_CONFIG.find((config) => config.id === 'codex');
   const downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-macos-mismatch-'));
   let installCalled = false;
-  await installSoftware(codex, () => {
+  await installWithStaticArtifact(codex, () => {
     throw new Error('Windows installer spawned');
   }, {
     target: { platform: 'darwin', arch: 'arm64', isWindows: false },
@@ -759,7 +1001,7 @@ test('installSoftware reports a running macOS application as blocked without kil
   const originalLog = console.log;
   console.log = (...args) => { output += `${args.join(' ')}\n`; };
   try {
-    const result = await installSoftware(ccSwitch, () => {
+    const result = await installWithStaticArtifact(ccSwitch, () => {
       throw new Error('Windows installer spawned');
     }, {
       target: { platform: 'darwin', arch: 'arm64', isWindows: false },
@@ -786,7 +1028,7 @@ test('installSoftware rejects a truncated macOS DMG before checksum or mount', a
   const downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'installer-macos-truncated-'));
   let checksumCalled = false;
   let installCalled = false;
-  const result = await installSoftware(claude, undefined, {
+  const result = await installWithStaticArtifact(claude, undefined, {
     target: { platform: 'darwin', arch: 'arm64', isWindows: false },
     downloadDir,
     downloadFile: async (_url, destination) => fs.promises.writeFile(destination, 'partial'),

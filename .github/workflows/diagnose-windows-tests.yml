@@ -43,6 +43,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
+          npm run validate:manifest 2>&1 | Tee-Object -FilePath diagnostic/manifest-validation.txt
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       - name: Record Windows runtime environment
         shell: pwsh

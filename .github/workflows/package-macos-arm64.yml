@@ -21,6 +21,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run validate:manifest
       - name: Record and assert Apple Silicon runner
         run: |
           set -euo pipefail

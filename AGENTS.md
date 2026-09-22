@@ -2,6 +2,21 @@
 
 This file records decisions that apply to all future work in this repository.
 
+## General Principles
+
+- 任何时候某个外部资源“访问失败”，先确认是当前执行环境的网络/DNS 问题，还是资源本身确实有问题。前者只需要换个网络环境重试或者查上游官方文档确认，不能直接当成后者来下结论、动手改代码。
+
+## Repository Root and Manifest Governance
+
+- The sole project root and sole Git repository is the `win-verify-macos-arm64/` directory.
+- The parent directory is only a workspace container. Do not recreate or maintain source files there.
+- Run Git, npm, tests, builds, and Release preparation from this repository root.
+- `software-manifest.js` is the only source of upstream GitHub repository, asset-selection rules, installer types, release provenance, and macOS bundle identity.
+- Runtime downloads must call the repository's GitHub Release API `releases/latest`, select the manifest-matched asset, and verify the downloaded file against that API asset's `size` and `digest`. Where the upstream project documents an official CDN short link, that manifest URL may be used for the actual download while GitHub API metadata remains the version and integrity source.
+- `checksumUrl` is optional audit metadata from the same latest Release; it is never the runtime trust fallback.
+- Every CI or Release build must run `npm run validate:manifest` before packaging.
+- Runtime installer code must not synthesize a guessed upstream URL; it may use only a manifest-declared upstream URL or the `browser_download_url` returned by the GitHub Release API. Manifest-declared CDN URLs must be documented by the upstream project and protected by the API asset size/digest check.
+
 ## Windows Support and Packaging
 
 - Official packaged targets are Windows x64 and native Windows ARM64 only.
