@@ -32,6 +32,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run validate:manifest
       - run: npm test
       - name: Verify pkg version
         shell: pwsh
@@ -89,6 +90,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run validate:manifest
       - name: Record and assert Apple Silicon runner
         run: |
           set -euo pipefail

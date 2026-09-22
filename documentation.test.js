@@ -26,9 +26,19 @@ test('macOS documentation describes Gatekeeper authorization and manual configur
   assert.doesNotMatch(docs, /选择要安装的工具/);
 });
 
-test('legacy Windows release workflow cannot publish on version-tag pushes', () => {
-  const workflow = read('.github/workflows/release-windows.yml');
-  assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /push:/);
-  assert.doesNotMatch(workflow, /SignPath/);
+test('project documentation identifies the nested repository as the sole project root', () => {
+  const readme = read('README.md');
+  assert.match(readme, /唯一项目根目录.*win-verify-macos-arm64/);
+  assert.match(readme, /npm run validate:manifest/);
+  assert.match(readme, /不再维护外层旧副本/);
+});
+
+test('manifest validation is part of the release workflows', () => {
+  for (const file of [
+    '.github/workflows/release-all.yml',
+    '.github/workflows/package-windows-artifacts.yml',
+    '.github/workflows/package-macos-arm64.yml',
+  ]) {
+    assert.match(read(file), /npm run validate:manifest/);
+  }
 });

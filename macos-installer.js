@@ -268,7 +268,8 @@ async function verifyMacApp({
     throw makeMacError(`找不到主可执行文件: ${executablePath}`, 'EXECUTABLE_MISSING', { cause: error });
   }
 
-  if (expected.architecture === 'arm64' || expected.architecture === 'universal') {
+  const binaryArchitecture = expected.binaryArchitecture || expected.architecture;
+  if (binaryArchitecture === 'arm64' || binaryArchitecture === 'universal') {
     await checkArm64Executable(executablePath, execFile);
   }
 

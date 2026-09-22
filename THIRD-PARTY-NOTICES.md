@@ -12,7 +12,7 @@
 
 - Project: CC Switch
 - Repository: https://github.com/farion1231/cc-switch
-- Upstream release source used by this installer: https://github.com/farion1231/cc-switch/releases
+- Upstream release source used by this installer: GitHub Release API `https://api.github.com/repos/farion1231/cc-switch/releases/latest`, which returns the matching Release asset download URL
 - License source: https://github.com/farion1231/cc-switch/blob/main/LICENSE
 - License text retrieved: 2026-09-06
 - License: MIT License
@@ -47,7 +47,7 @@ SOFTWARE.
 
 - Project: Claude App Mirror
 - Repository: https://github.com/Wangnov/claude-app-mirror
-- Upstream release source used by this installer: https://github.com/Wangnov/claude-app-mirror/releases
+- Upstream release metadata used by this installer: GitHub Release API `https://api.github.com/repos/Wangnov/claude-app-mirror/releases/latest`; downloads use the project's documented official CDN short links `https://claudeapp.agentsmirror.com/latest/mac`, `.../win-x64`, or `.../win-arm64`, while API `size` and `digest` remain the integrity source
 - License source: https://github.com/Wangnov/claude-app-mirror/blob/main/LICENSE
 - License text retrieved: 2026-09-06
 - License: MIT License
@@ -82,7 +82,7 @@ SOFTWARE.
 
 - Project: Codex App Mirror
 - Repository: https://github.com/Wangnov/codex-app-mirror
-- Upstream release source used by this installer: https://github.com/Wangnov/codex-app-mirror/releases
+- Upstream release metadata used by this installer: GitHub Release API `https://api.github.com/repos/Wangnov/codex-app-mirror/releases/latest`; downloads use the project's documented official CDN short links `https://codexapp.agentsmirror.com/latest/mac-arm64`, `.../win-x64`, or `.../win-arm64`, while API `size` and `digest` remain the integrity source
 - License source: https://github.com/Wangnov/codex-app-mirror/blob/main/LICENSE
 - License text retrieved: 2026-09-06
 - License: MIT License

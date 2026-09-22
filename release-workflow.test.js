@@ -57,3 +57,8 @@ test('combined release is the only standard version-tag release path', () => {
   assert.doesNotMatch(workflow, /prerelease:\s*true/);
   assert.match(workflow, /prerelease:\s*false/);
 });
+
+test('combined release validates the manifest before building Windows and macOS artifacts', () => {
+  assert.match(workflow, /run: npm run validate:manifest/);
+  assert.ok((workflow.match(/run: npm run validate:manifest/g) || []).length >= 2);
+});

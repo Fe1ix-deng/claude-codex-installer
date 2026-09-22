@@ -16,9 +16,10 @@ function parseChecksumText(text) {
 
 function findChecksumEntry(checksumMap, { softwareName, arch, filename }) {
   if (!(checksumMap instanceof Map)) return null;
+  const exact = checksumMap.get(filename);
+  if (exact) return { filename, checksum: exact };
   if (softwareName === 'claude') {
-    const checksum = checksumMap.get(filename);
-    return checksum ? { filename, checksum } : null;
+    return null;
   }
   if (softwareName !== 'codex' || (arch !== 'x64' && arch !== 'arm64')) return null;
 
